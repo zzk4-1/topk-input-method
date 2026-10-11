@@ -207,6 +207,8 @@ class Handler(BaseHTTPRequestHandler):
 def main() -> None:
     parser = argparse.ArgumentParser(description="Top-K 输入法 · 网页版 Demo（模拟手机聊天）")
     parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--host", default="127.0.0.1",
+                        help="监听地址（真机预览用 0.0.0.0，手机经局域网访问）")
     parser.add_argument("--k", type=int, default=6, help="候选按钮数（网页版默认 6，2×3 大按钮）")
     parser.add_argument("--key-file", default=str(ROOT / "key.txt"))
     parser.add_argument("--no-cache", action="store_true")
@@ -220,9 +222,19 @@ def main() -> None:
                               args.prefetch, args.prefetch_depth, args.prefetch_workers)
     demo = ChatDemo(provider, unwrap_engine(provider), k=args.k)
     Handler.demo = demo
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
+    server = ThreadingHTTPServer((args.host, args.port), Handler)
     url = f"http://127.0.0.1:{args.port}"
     print(f"Top-K 输入法网页 Demo：{url}  (provider=api, k={args.k})", flush=True)
+    if args.host not in ("127.0.0.1", "localhost"):
+        import socket
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            lan_ip = s.getsockname()[0]
+            s.close()
+        except OSError:
+            lan_ip = "<本机局域网IP>"
+        print(f"真机预览请在小程序设置中填：http://{lan_ip}:{args.port}", flush=True)
     if args.open:
         webbrowser.open(url)
     try:
