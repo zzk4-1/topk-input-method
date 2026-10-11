@@ -1,0 +1,72 @@
+<view class="page">
+  <view wx:if="{{!connected}}" class="banner">连接断开，正在重试…请确认电脑上服务器已启动</view>
+
+  <view class="topbar">
+    <view class="topbar-btn" bindtap="onReselectTap">改场景</view>
+    <view class="topbar-btn" bindtap="onOpenSettings">设置</view>
+  </view>
+
+  <scroll-view class="chat" scroll-y scroll-into-view="{{scrollInto}}" scroll-with-animation>
+    <view wx:for="{{messages}}" wx:key="_id" id="msg-{{index}}" class="row {{item.role === 'me' ? 'row-me' : ''}}">
+      <view class="bubble {{item.role === 'me' ? 'bubble-me' : 'bubble-friend'}}">{{item.text}}</view>
+    </view>
+    <view wx:if="{{replying}}" class="row">
+      <view class="bubble bubble-friend typing">
+        <view class="dot"></view>
+        <view class="dot"></view>
+        <view class="dot"></view>
+      </view>
+    </view>
+    <view class="chat-pad"></view>
+  </scroll-view>
+
+  <block wx:if="{{started}}">
+    <view class="draft">
+      <text class="draft-label">草稿</text>
+      <text class="draft-text">{{draft || '点下方候选组句'}}</text>
+    </view>
+
+    <view class="grid">
+      <view
+        wx:for="{{candidates}}"
+        wx:key="*this"
+        class="cand {{pending ? 'cand-disabled' : ''}}"
+        data-index="{{index}}"
+        bindtap="onCandidate"
+      >{{item}}</view>
+    </view>
+
+    <view class="actions">
+      <view class="act {{pending ? 'act-disabled' : ''}}" bindtap="onUndo">撤销</view>
+      <view class="act {{pending ? 'act-disabled' : ''}}" bindtap="onMore">换一批</view>
+      <view class="act {{draft && !pending ? '' : 'act-disabled'}}" bindtap="onCopy">复制</view>
+      <view class="act act-send {{draft && !pending ? '' : 'act-disabled'}}" bindtap="onSend">发送</view>
+    </view>
+  </block>
+
+  <view wx:if="{{showScene}}" class="mask">
+    <view class="panel">
+      <view class="panel-title">选择一个场景开始</view>
+      <view class="chips">
+        <view wx:for="{{scenes}}" wx:key="*this" class="chip" data-text="{{item}}" bindtap="onSceneTap">{{item}}</view>
+      </view>
+      <input
+        class="panel-input"
+        placeholder="或自定义场景，如：朋友问我周末干嘛"
+        value="{{sceneInput}}"
+        bindinput="onSceneInput"
+      />
+      <view class="panel-btn {{sceneInput ? '' : 'panel-btn-disabled'}}" bindtap="onSceneCustom">开始</view>
+      <view class="panel-link" bindtap="onOpenSettingsFromScene">连不上？服务器设置</view>
+    </view>
+  </view>
+
+  <view wx:if="{{showSettings}}" class="mask mask-top" bindtap="onCloseSettings">
+    <view class="panel" catchtap="noop">
+      <view class="panel-title">服务器地址</view>
+      <input class="panel-input" value="{{serverUrl}}" bindinput="onServerInput" placeholder="http://127.0.0.1:8000" />
+      <view class="panel-btn" bindtap="onSaveServer">保存并重连</view>
+      <view class="panel-tip">开发者工具里默认即可；手机真机预览请填电脑的局域网 IP</view>
+    </view>
+  </view>
+</view>

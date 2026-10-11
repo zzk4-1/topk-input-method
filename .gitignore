@@ -8,3 +8,6 @@ key.txt
 # Python
 __pycache__/
 *.pyc
+
+# 微信开发者工具本地私有配置（含个人 AppID，勿提交）
+miniprogram/project.private.config.json
