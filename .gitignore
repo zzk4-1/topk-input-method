@@ -1,0 +1,10 @@
+# API 密钥（仅程序运行时读取，严禁提交）
+key.txt
+
+# 运行时缓存
+.topk_cache*.json
+*.tmp
+
+# Python
+__pycache__/
+*.pyc

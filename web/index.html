@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Top-K 输入法 · 手机聊天 Demo</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    gap: 36px; flex-wrap: wrap; padding: 16px;
+    background: #17181B; color: #E8E8EA;
+    font-family: "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .side { max-width: 300px; }
+  .side h1 { font-size: 26px; margin-bottom: 12px; color: #fff; }
+  .side h1 em { color: #07C160; font-style: normal; }
+  .side p { font-size: 15px; line-height: 1.8; color: #B9BBC1; margin-bottom: 16px; }
+  .side ul { list-style: none; font-size: 14px; line-height: 2; color: #9DA0A8; }
+  .side li::before { content: "· "; color: #07C160; font-weight: 700; }
+  .stats { margin-top: 16px; font-size: 13px; color: #6E7178; }
+
+  /* ---------- 手机 ---------- */
+  .phone {
+    width: 392px; height: min(846px, calc(100vh - 24px)); min-height: 620px;
+    background: #101114; border-radius: 54px; padding: 12px;
+    box-shadow: 0 30px 90px rgba(0,0,0,.6), inset 0 0 0 2px #2A2C31;
+  }
+  .screen {
+    position: relative; width: 100%; height: 100%;
+    border-radius: 42px; overflow: hidden; background: #F5F5F5;
+    display: flex; flex-direction: column; color: #111;
+  }
+  .statusbar {
+    height: 34px; flex: none; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 22px; font-size: 13px; font-weight: 600; background: #EDEDED; color: #111;
+  }
+  .wx-head {
+    height: 48px; flex: none; display: flex; align-items: center;
+    background: #EDEDED; border-bottom: 1px solid #DCDCDC; padding: 0 14px;
+  }
+  .wx-head .back { width: 60px; font-size: 26px; color: #111; }
+  .wx-head .name { flex: 1; text-align: center; font-size: 17px; font-weight: 600; }
+  .wx-head .more { width: 60px; text-align: right; font-size: 20px; color: #111; letter-spacing: 1px; }
+
+  /* ---------- 聊天区 ---------- */
+  .chat { flex: 1; overflow-y: auto; padding: 12px 12px 6px; }
+  .divider { text-align: center; font-size: 12px; color: #9A9A9A; margin: 4px 0 10px; }
+  .errbar {
+    background: #FFF7E6; color: #8A6116; font-size: 12px; line-height: 1.5;
+    padding: 7px 10px; border-radius: 6px; margin: 0 0 10px;
+    word-break: break-word; overflow-wrap: anywhere;
+    animation: pop .18s ease-out;
+  }
+  .msg { display: flex; align-items: flex-start; gap: 9px; margin: 12px 0; }
+  .msg.me { justify-content: flex-end; }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 6px; flex: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; color: #fff; background: #9DB4D6;
+  }
+  .avatar.me { background: #6FBF4E; }
+  .bubble {
+    position: relative; max-width: 66%; padding: 10px 13px;
+    border-radius: 8px; font-size: 16.5px; line-height: 1.45; word-break: break-word; overflow-wrap: anywhere;
+  }
+  .msg.friend .bubble { background: #FFF; }
+  .msg.friend .bubble::before {
+    content: ""; position: absolute; left: -5px; top: 14px;
+    border: 5px solid transparent; border-right-color: #FFF; border-left: none;
+  }
+  .msg.me .bubble { background: #95EC69; }
+  .msg.me .bubble::before {
+    content: ""; position: absolute; right: -5px; top: 14px;
+    border: 5px solid transparent; border-left-color: #95EC69; border-right: none;
+  }
+  .bubble.typing { display: flex; align-items: center; gap: 8px; color: #888; font-size: 14px; }
+  .dots span {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: #AAA; margin-right: 3px; animation: blink 1.2s infinite;
+  }
+  .dots span:nth-child(2) { animation-delay: .2s; }
+  .dots span:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%,80%,100% { opacity: .25; } 40% { opacity: 1; } }
+
+  /* ---------- 底部：大按钮区 ---------- */
+  .dock { flex: none; background: #F7F7F7; border-top: 1px solid #E2E2E2; padding: 8px 10px 12px; }
+  .draftbar {
+    display: flex; align-items: center; gap: 8px;
+    min-height: 32px; padding: 0 4px; font-size: 14px; color: #888;
+  }
+  .draftbar .draft-text {
+    flex: 1; font-size: 16px; color: #111; font-weight: 600; line-height: 1.4;
+    word-break: break-word; overflow-wrap: anywhere;  /* 编辑太长时自动换行 */
+  }
+  .draftbar .draft-text.empty { color: #BBB; font-weight: 400; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0 10px; }
+  .cand {
+    min-height: 64px; border-radius: 12px; border: 1.5px solid #D9D9D9;
+    background: #FFF; color: #111; font-size: 17.5px; line-height: 1.3;
+    padding: 6px 10px; cursor: pointer; transition: transform .1s, opacity .15s;
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    font-family: inherit;
+  }
+  .cand:active { transform: scale(.96); }
+  .grid.pending .cand { opacity: .4; pointer-events: none; }
+  @keyframes cand-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .cand { animation: cand-in .18s ease-out backwards; }
+  @keyframes msg-in {
+    from { opacity: 0; transform: translateY(10px) scale(.97); }
+    to   { opacity: 1; transform: none; }
+  }
+  .msg.new { animation: msg-in .22s ease-out backwards; }
+  @keyframes draft-pop {
+    0%   { opacity: .3; transform: translateY(4px); }
+    100% { opacity: 1; transform: none; }
+  }
+  .draft-text.pop { animation: draft-pop .18s ease-out; }
+  @media (prefers-reduced-motion: reduce) {
+    .cand, .msg.new, .draft-text.pop { animation: none; }
+  }
+  .grid-empty {
+    grid-column: 1 / -1; min-height: 64px; border: 1.5px dashed #D5D5D5; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    color: #999; font-size: 15px;
+  }
+  .actions { display: flex; gap: 8px; }
+  .btn {
+    flex: 1; min-height: 56px; border-radius: 12px; border: 1.5px solid #D9D9D9;
+    background: #FFF; color: #111; font-size: 17px; cursor: pointer; font-family: inherit;
+    transition: transform .1s, opacity .15s;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn:disabled { opacity: .38; cursor: default; }
+  .btn.primary {
+    flex: 1.5; background: #07C160; border-color: #07C160; color: #fff; font-weight: 600;
+  }
+  .legend { font-size: 12px; color: #A0A0A0; text-align: center; padding-top: 8px; }
+
+  /* ---------- 场景选择浮层 ---------- */
+  .overlay {
+    position: absolute; inset: 0; z-index: 10;
+    background: rgba(245,245,245,.985);
+    display: flex; align-items: center; justify-content: center; padding: 22px;
+  }
+  .overlay-card { width: 100%; }
+  .overlay-card h2 { font-size: 21px; margin-bottom: 16px; }
+  .chips { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .chip {
+    min-height: 56px; border-radius: 12px; border: 1.5px solid #D9D9D9; background: #FFF;
+    font-size: 15.5px; color: #333; cursor: pointer; font-family: inherit; padding: 6px;
+  }
+  .chip.sel { border-color: #07C160; background: #E8F9EE; color: #0A7A3D; font-weight: 600; }
+  .overlay-card input {
+    width: 100%; min-height: 52px; border-radius: 12px; border: 1.5px solid #D9D9D9;
+    font-size: 15.5px; padding: 0 14px; margin-bottom: 14px; font-family: inherit;
+  }
+  .overlay-card input:focus { outline: none; border-color: #07C160; }
+  .overlay-card .btn.primary { width: 100%; }
+  .hint { margin-top: 12px; text-align: center; font-size: 14px; color: #888; min-height: 20px; }
+</style>
+</head>
+<body>
+  <aside class="side">
+    <h1>Top-K <em>输入法</em></h1>
+    <p>模拟手机聊天场景：不碰键盘，只点候选大按钮就能把一句话“点”出来。发送后，对方（LLM 扮演）会自动回复。</p>
+    <ul>
+      <li>候选由 AI 根据聊天上下文实时预测</li>
+      <li>点候选把短语拼进句子，随时可撤销 / 换一批</li>
+      <li>组好一句点发送，对方（LLM 扮演）会自动回复</li>
+      <li>后台两步并发预取，点选近乎零等待</li>
+    </ul>
+    <div class="stats" id="stats"></div>
+  </aside>
+
+  <div class="phone">
+    <div class="screen">
+      <div class="statusbar"><span>9:41</span><span>···</span></div>
+      <div class="wx-head"><span class="back">‹</span><span class="name">小雨</span><span class="more">···</span></div>
+      <div class="chat" id="chat"></div>
+      <div class="dock">
+        <div class="draftbar"><span>已输入</span><span class="draft-text empty" id="draft">∅</span></div>
+        <div class="grid" id="grid"></div>
+        <div class="actions">
+          <button class="btn" id="undoBtn">撤销</button>
+          <button class="btn" id="moreBtn">换一批</button>
+          <button class="btn primary" id="sendBtn">发 送</button>
+        </div>
+        <div class="legend">点候选把短语拼进句子 · 满意后发送</div>
+      </div>
+
+      <div class="overlay" id="overlay">
+        <div class="overlay-card">
+          <h2>选择一个聊天场景</h2>
+          <div class="chips">
+            <button class="chip" data-text="周末有空吗？一起吃个饭呀？">朋友约饭</button>
+            <button class="chip" data-text="周六下午一起去看新上的电影吗？">约看电影</button>
+            <button class="chip" data-text="这周的方案大概什么时候能给我呀？">同事催方案</button>
+            <button class="chip" data-text="天冷了记得多穿点，你什么时候回家？">家人问候</button>
+          </div>
+          <input id="custom" placeholder="或输入一条“对方发来”的消息…">
+          <button class="btn primary" id="startBtn">开始聊天</button>
+          <div class="hint" id="hint"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let cur = { version: -1, messages: [], draft: "", candidates: [], pending: false, replying: false, started: false, prefetched: 0 };
+let started = false, awaiting = false, chatKey = "", selChip = null;
+
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+async function api(path, body, timeoutMs = 30000) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  const opt = body
+    ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+    : {};
+  opt.signal = ctrl.signal;
+  try {
+    const r = await fetch(path, opt);
+    return r.json();
+  } finally { clearTimeout(timer); }
+}
+
+let lastMsgCount = 0;
+
+function renderChat() {
+  let html = '<div class="divider">晚上 8:02</div>';
+  if (cur.error) html += `<div class="errbar">⚠ AI 候选暂时不可用，已切换离线兜底：${esc(cur.error)}</div>`;
+  const n = cur.messages.length;
+  cur.messages.forEach((m, i) => {
+    // 只给“新增的最后一条”加入场动画：整块重建时旧消息保持稳定，不闪烁
+    const isNew = i === n - 1 && n > lastMsgCount ? " new" : "";
+    html += m.role === "friend"
+      ? `<div class="msg friend${isNew}"><div class="avatar">雨</div><div class="bubble">${esc(m.text)}</div></div>`
+      : `<div class="msg me${isNew}"><div class="bubble">${esc(m.text)}</div><div class="avatar me">我</div></div>`;
+  });
+  if (started && cur.replying) {
+    html += `<div class="msg friend new"><div class="avatar">雨</div><div class="bubble typing">` +
+            `<span class="dots"><span></span><span></span><span></span></span>对方正在输入…</div></div>`;
+  }
+  const chat = $("chat");
+  chat.innerHTML = html;
+  chat.scrollTop = chat.scrollHeight;
+  lastMsgCount = n;
+}
+
+let lastGridKey = null;
+
+function renderGrid() {
+  const grid = $("grid");
+  // 候选内容没变就不重建 DOM：pending 期间只切换状态类，避免入场动画重播导致闪烁
+  const key = cur.candidates.length ? JSON.stringify(cur.candidates) : "empty:" + cur.pending;
+  if (key !== lastGridKey) {
+    lastGridKey = key;
+    grid.innerHTML = cur.candidates.map((text, i) =>
+      `<button class="cand" style="animation-delay:${Math.min(i * 25, 150)}ms" onclick="act('select',${i})">${esc(text)}</button>`
+    ).join("") || `<div class="grid-empty">${cur.pending ? "正在准备新的候选…" : "选择候选开始组句"}</div>`;
+  }
+  grid.classList.toggle("pending", cur.pending);
+}
+
+function render() {
+  const key = cur.messages.length + ":" + cur.replying;
+  if (key !== chatKey) { chatKey = key; renderChat(); }
+  const d = $("draft");
+  const dt = cur.draft || "∅";
+  if (d.textContent !== dt) {           // 草稿变化：更新并重播小提示动画
+    d.textContent = dt;
+    d.classList.remove("pop");
+    void d.offsetWidth;                  // 强制重排以重启动画
+    d.classList.add("pop");
+  }
+  d.classList.toggle("empty", !cur.draft);
+  renderGrid();
+  $("sendBtn").disabled = !cur.draft || cur.pending;
+  $("undoBtn").disabled = cur.pending;
+  $("moreBtn").disabled = cur.pending;
+  $("stats").textContent = cur.prefetched ? `后台已预取 ${cur.prefetched} 屏候选` : "";
+}
+
+async function act(type, index) {
+  if (awaiting) return;
+  awaiting = true;
+  cur.pending = true; render();          // 乐观反馈：立即进入刷新态
+  try { cur = await api("/api/action", { type, index }); }
+  catch (e) { cur.pending = false; }     // 请求失败：解除锁定，可重试
+  awaiting = false; render();
+}
+window.act = act;
+
+async function start() {
+  const text = ($("custom").value || "").trim() || (selChip && selChip.dataset.text);
+  if (!text) { $("hint").textContent = "请先选择场景，或输入一条消息"; return; }
+  $("startBtn").disabled = true;
+  $("hint").textContent = "正在生成第一批候选…";
+  try {
+    cur = await api("/api/start", { text });
+    started = true;
+    $("overlay").style.display = "none";
+    render();
+  } catch (e) {
+    $("hint").textContent = "启动失败，请重试";
+    $("startBtn").disabled = false;
+  }
+}
+
+document.querySelectorAll(".chip").forEach((ch) => ch.addEventListener("click", () => {
+  document.querySelectorAll(".chip").forEach((c) => c.classList.remove("sel"));
+  ch.classList.add("sel");
+  selChip = ch;
+  $("custom").value = "";
+  $("hint").textContent = "";
+}));
+$("startBtn").addEventListener("click", start);
+$("undoBtn").addEventListener("click", () => act("undo", 0));
+$("moreBtn").addEventListener("click", () => act("more", 0));
+$("sendBtn").addEventListener("click", () => act("send", 0));
+
+setInterval(async () => {
+  if (!started || awaiting) return;
+  try {
+    const s = await api("/api/state");
+    if (s.version !== cur.version) { cur = s; render(); }
+  } catch (e) {}
+}, 800);
+</script>
+</body>
+</html>
